@@ -84,8 +84,9 @@ if __name__ == "__main__":
         print(f"[{post['subreddit']}] {post['title']} ({post['score']} points)")
         print(f"Link: {post['permalink']}\n")
 
-    today = datetime.today().strftime("%Y-%m-%d")
-    filename = f"reddit_weird_news_{today}.csv"
+    # Use full timestamp so each run creates a unique file
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"reddit_weird_news_{timestamp}.csv"
     save_posts_to_csv(posts, filename)
 
     s3_key = f"reddit_weird_news/{filename}"
