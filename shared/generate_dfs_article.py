@@ -1,103 +1,117 @@
 import os
 import boto3
+import openai
 import datetime
-import pandas as pd
+from shared.openai_utils import get_openai_client
+from shared.s3_utils import download_latest_file
 
-from openai import OpenAI
-from dotenv import load_dotenv
+S3_BUCKET = "fantasy-sports-csvs"
+REDDIT_BUCKET = "news-headlines-csvs"
 
-load_dotenv()
-
-# Set up AWS + OpenAI
-s3 = boto3.client("s3")
-bucket_name = "news-headlines-csvs"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-today = datetime.date.today().strftime("%Y-%m-%d")
-
-# Define expected files with correct keys
-s3_files = {
-    "mlb_boxscores": f"mlb_boxscores_{today}.csv",
-    "mlb_espn_articles": f"mlb_espn_articles_{today}.csv",
-    "mlb_rosters": f"mlb_rosters_{today}.csv",
-    "mlb_weather": f"mlb_weather_{today}.csv",
-    "mlb_probable_starters": f"mlb_probable_starters_{today}.csv",
-    "mlb_betting_odds": f"mlb_betting_odds_{today}.csv",
-    "reddit_fantasy_baseball": f"reddit_fantasy_baseball_{today}.csv"
+file_sources = {
+    "boxscores": ("baseball/boxscores", "mlb_boxscores"),
+    "espn_articles": ("baseball/news", "mlb_espn_articles"),
+    "rosters": ("baseball/rosters", "mlb_rosters"),
+    "weather": ("baseball/weather", "mlb_weather"),
+    "probable_starters": ("baseball/probablestarters", "mlb_probable_starters"),
+    "betting_odds": ("baseball/betting", "mlb_betting_odds"),
+    "reddit_fantasy": ("reddit_fantasy_baseball", "reddit_fantasy_baseball"),
 }
 
-# Create tmp folder
-os.makedirs("shared/tmp", exist_ok=True)
+def download_latest_file_from_s3(s3_client, prefix, filename_prefix, local_path):
+    print(f"Attempting to download: s3://{S3_BUCKET}/{prefix}/{filename_prefix}_YYYY-MM-DD.csv")
+    return download_latest_file(S3_BUCKET, prefix, filename_prefix, local_path)
 
-# Download files from S3
-local_paths = {}
-for key, filename in s3_files.items():
-    local_path = f"shared/tmp/{filename}"
-    s3_key = f"{key}/{filename}"
-    try:
-        print(f"📥 Attempting to download: s3://{bucket_name}/{s3_key}")
-        s3.download_file(bucket_name, s3_key, local_path)
-        print(f"✅ Downloaded: {s3_key}")
-        local_paths[key] = local_path
-    except Exception as e:
-        print(f"❌ Failed to download {s3_key}: {e}")
+def download_latest_reddit_file(s3_client, prefix, filename_prefix, local_path):
+    print(f"Attempting to download: s3://{REDDIT_BUCKET}/{prefix}/{filename_prefix}_YYYY-MM-DD.csv")
+    return download_latest_file(REDDIT_BUCKET, prefix, filename_prefix, local_path)
 
-# Load data (only those that downloaded successfully)
-loaded_data = {}
-for key, path in local_paths.items():
-    try:
-        loaded_data[key] = pd.read_csv(path)
-    except Exception as e:
-        print(f"❌ Error reading {path}: {e}")
+def load_csv(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return f.read()
 
-# Build system prompt
-system_prompt = """
-You are a fantasy baseball expert helping users build their daily DFS lineups.
+def build_prompt(data):
+    today = datetime.date.today().strftime("%B %d, %Y")
+    prompt = f"""You are a professional fantasy baseball analyst writing a DFS advice article for {today}.
 
-You will be given:
-- Box scores from the previous day
-- Today's starting pitchers and weather
-- Team rosters with injury statuses
-- ESPN hitter picks
-- Reddit fantasy baseball discussion
-- Vegas odds (totals, spreads, moneylines)
+Use the following CSV content sources to write your article:
 
-Write a single DFS article with:
-1. Pitchers to target (explain why)
-2. Pitchers to fade (explain why)
-3. Top hitter picks by position (1B, 2B, 3B, SS, OF, C, UTIL)
-4. Suggested stacks by team
-5. Weather impact (skip domes)
-6. Value plays (compare to expected salary)
+1. **Box Scores (Yesterday)**:
+{data['boxscores'][:1500]}
 
-Tone: helpful, sharp, insightful. Don’t list full lineups. Prioritize context and reasoning behind each pick.
+2. **ESPN Fantasy Article (Hitter Projections)**:
+{data['espn_articles'][:1500]}
+
+3. **Reddit Fantasy Baseball Highlights**:
+{data['reddit_fantasy'][:1500]}
+
+4. **Weather Reports**:
+{data['weather'][:1000]}
+
+5. **Probable Starters (Pitching Matchups)**:
+{data['probable_starters'][:1000]}
+
+6. **Betting Odds**:
+{data['betting_odds'][:1000]}
+
+7. **Roster Info (Injuries/Callups)**:
+{data['rosters'][:1000]}
+
+Your article should include:
+- 2–3 Pitchers to Target (based on matchups, weather, and value)
+- 1–2 Pitchers to Fade
+- 2–3 Hitters to Target at Each Position (C, 1B, 2B, 3B, SS, OF)
+- Any Team Stacks that make sense based on matchups, weather, or Vegas odds
+- Brief recap of how yesterday’s picks performed (based on boxscores)
+- Callouts to news or injuries (from Reddit and roster data)
+
+Be concise and sharp, as if writing for a daily fantasy sports blog. Use bullet points or sections to keep it readable.
 """
+    return prompt
 
-# Build user message
-user_message = "Here are today's files:\n\n"
-for key, df in loaded_data.items():
-    preview = df.head(10).to_csv(index=False)
-    user_message += f"\n\n=== {key.upper()} ===\n{preview}"
+def main():
+    s3 = boto3.client("s3")
+    local_data = {}
 
-# Run OpenAI completion
-print("🧠 Generating DFS article with OpenAI...")
-response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {"role": "system", "content": system_prompt.strip()},
-        {"role": "user", "content": user_message.strip()}
-    ],
-    temperature=0.7
-)
+    for key, (prefix, filename_prefix) in file_sources.items():
+        local_path = f"/tmp/{filename_prefix}.csv"
+        try:
+            if key == "reddit_fantasy":
+                download_latest_reddit_file(s3, prefix, filename_prefix, local_path)
+            else:
+                download_latest_file_from_s3(s3, prefix, filename_prefix, local_path)
+            local_data[key] = load_csv(local_path)
+        except Exception as e:
+            print(f"⚠️ Failed to download {key}: {e}")
+            local_data[key] = ""
 
-# Extract content
-article_text = response.choices[0].message.content.strip()
+    print("✅ Generating DFS article with OpenAI...")
+    client = get_openai_client()
+    prompt = build_prompt(local_data)
 
-# Save article
-os.makedirs("shared/generated_dfs_articles", exist_ok=True)
-output_path = f"shared/generated_dfs_articles/dfs_article_{today}.txt"
-with open(output_path, "w", encoding="utf-8") as f:
-    f.write(article_text)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a professional fantasy baseball analyst."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+        content = response.choices[0].message.content
+    except Exception as e:
+        print("❌ OpenAI API error:", e)
+        raise
 
-print(f"✅ DFS article saved to {output_path}")
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    output_dir = os.path.join("shared", "generated_dfs_articles")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, f"fantasy_dfs_article_{today}.txt")
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"✅ DFS article saved to: {output_path}")
+
+if __name__ == "__main__":
+    main()
