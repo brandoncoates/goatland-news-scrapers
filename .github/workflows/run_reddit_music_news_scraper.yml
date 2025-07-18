@@ -1,36 +1,35 @@
 name: Run Reddit Music News Scraper
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 14 * * *'  # Runs daily at 2PM UTC
+    - cron: '0 15 * * *'  # Runs every day at 9am CST
+  workflow_dispatch:
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./reddit_news/music_news
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Log runner’s current working directory
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
         run: |
-          echo "PWD (from job root): $PWD"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: List entire directory tree from root
-        run: |
-          echo "Directory tree from repo root:"
-          ls -R
-
-      - name: List contents of music_news folder
-        run: |
-          echo "Contents of reddit_news/music_news:"
-          ls -la ./reddit_news/music_news
-
-      - name: Run reddit_music_news_scraper.py
-        run: python reddit_music_news_scraper.py
-
+      - name: Run Music News Scraper
+        env:
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+        run: python reddit_news/music_news/reddit_music_news_scraper.py
