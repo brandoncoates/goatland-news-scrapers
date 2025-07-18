@@ -24,4 +24,5 @@ jobs:
       - name: Run article generator
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PYTHONPATH: .  # This makes sure Python can find the 'shared' package
         run: python shared/generate_dfs_article.py
