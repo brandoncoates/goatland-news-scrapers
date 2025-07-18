@@ -14,7 +14,7 @@ reddit = praw.Reddit(
 # Get today's date for filename
 today = datetime.now().strftime("%Y-%m-%d")
 filename = f"reddit_fantasybaseball_articles_{today}.csv"
-folder_name = "fantasy_baseball"
+folder_name = "reddit_fantasy_baseball"
 s3_key = f"{folder_name}/{filename}"
 
 # Pull top 10 posts from r/fantasybaseball
