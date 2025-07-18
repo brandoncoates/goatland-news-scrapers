@@ -1,33 +1,27 @@
-name: Generate Fantasy DFS Article
+name: generate_dfs_article
 
 on:
   schedule:
-    - cron: '0 16 * * *'  # 10:00 AM MST = 16:00 UTC
-  workflow_dispatch:       # allows manual runs
+    - cron: '0 16 * * *'  # Runs at 10:00 AM MST (16:00 UTC)
+  workflow_dispatch:
 
 jobs:
-  generate_dfs_article:
+  run-generator:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install openai boto3 pandas
+        run: pip install -r requirements.txt
 
       - name: Run article generator
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          python shared/generate_dfs_article.py
+        run: python shared/generate_dfs_article.py

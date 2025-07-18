@@ -3,3 +3,4 @@ praw
 beautifulsoup4
 python-dotenv
 boto3
+openai
