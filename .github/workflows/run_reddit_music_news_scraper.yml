@@ -32,5 +32,5 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+        working-directory: goatland-news-scrapers
         run: python reddit_news/music_news/reddit_music_news_scraper.py
-
