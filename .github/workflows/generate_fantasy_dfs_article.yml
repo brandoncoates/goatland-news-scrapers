@@ -1,4 +1,4 @@
-name: run-generator
+name: Run Generate DFS Article
 
 on:
   workflow_dispatch:
