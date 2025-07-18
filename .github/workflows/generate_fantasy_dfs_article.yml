@@ -1,4 +1,4 @@
-name: generate_dfs_article
+name: Run Generate DFS Article
 
 on:
   schedule:
