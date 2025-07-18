@@ -38,7 +38,7 @@ reddit = praw.Reddit(
     user_agent=REDDIT_USER_AGENT,
 )
 
-subreddits = ["sports", "sportsnews"]
+subreddits = ["sports"]
 
 def fetch_top_sports_posts(limit=5):
     results = []
