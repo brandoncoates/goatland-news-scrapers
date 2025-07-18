@@ -1,28 +1,28 @@
-name: Run Generate DFS Article
+name: run-generator
 
 on:
-  schedule:
-    - cron: '0 16 * * *'  # Runs at 10:00 AM MST (16:00 UTC)
   workflow_dispatch:
+  schedule:
+    - cron: "16 16 * * *"  # runs daily at 4:16 PM UTC (10:16 AM MST)
 
 jobs:
-  run-generator:
+  generate:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Add repo root to PYTHONPATH
+        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+
       - name: Run article generator
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          PYTHONPATH: .  # This makes sure Python can find the 'shared' package
         run: python shared/generate_dfs_article.py
