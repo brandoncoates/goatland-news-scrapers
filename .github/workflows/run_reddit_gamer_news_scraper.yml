@@ -1,0 +1,55 @@
+name: Scrape & Store Goatland News
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC
+  workflow_dispatch:
+
+env:
+  REDDIT_CLIENT_ID:      ${{ secrets.REDDIT_CLIENT_ID }}
+  REDDIT_CLIENT_SECRET:  ${{ secrets.REDDIT_CLIENT_SECRET }}
+  REDDIT_USER_AGENT:     ${{ secrets.REDDIT_USER_AGENT }}
+  AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION:            ${{ secrets.AWS_REGION }}
+  S3_BUCKET_NAME:        ${{ secrets.S3_BUCKET_NAME }}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        category:
+          - entertainment_news
+          - fantasy_baseball_news
+          - music_news
+          - news_headlines
+          - sports_news
+          - weird_news
+          - gamer_news   # ← new
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper for ${{ matrix.category }}
+        working-directory: GOATLAND-NEWS-SCRAPERS/reddit_news/${{ matrix.category }}
+        run: |
+          if [ "${{ matrix.category }}" = "gamer_news" ]; then
+            python run_reddit_gamer_news_scraper.py
+          else
+            python reddit_${{ matrix.category }}_scraper.py
+          fi
+
+      - name: Upload CSV to S3
+        run: |
+          FILE=$(ls reddit_${{ matrix.category }}_*\.csv)
+          aws s3 cp "$FILE" "s3://${{ env.S3_BUCKET_NAME }}/reddit_${{ matrix.category }}/${FILE}"
