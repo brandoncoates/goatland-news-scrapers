@@ -32,7 +32,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Gamer News scraper
-        run: python GOATLAND-NEWS-SCRAPERS/reddit_news/gamer_news/run_reddit_gamer_news_scraper.py
+        run: python GOATLAND-NEWS-SCRAPERS/reddit_news/gamer_news/reddit_gamer_news_scraper.py
 
       - name: Upload Gamer CSV to S3
         run: |
