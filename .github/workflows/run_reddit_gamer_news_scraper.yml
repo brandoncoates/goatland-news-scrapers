@@ -1,4 +1,4 @@
-name: Scrape & Store Goatland News
+name: Run Reddit Gamer News Scraper
 
 on:
   schedule:
