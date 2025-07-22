@@ -1,31 +1,29 @@
 name: Scrape Gamer News
 
-# trigger daily at 06:00 UTC, or manually
 on:
   schedule:
+    # every day at 06:00 UTC
     - cron: '0 6 * * *'
   workflow_dispatch:
 
 env:
-  # Reddit creds
-  REDDIT_CLIENT_ID:     ${{ secrets.REDDIT_CLIENT_ID }}
-  REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
-  REDDIT_USER_AGENT:    ${{ secrets.REDDIT_USER_AGENT }}
-  # AWS S3 creds
+  REDDIT_CLIENT_ID:      ${{ secrets.REDDIT_CLIENT_ID }}
+  REDDIT_CLIENT_SECRET:  ${{ secrets.REDDIT_CLIENT_SECRET }}
+  REDDIT_USER_AGENT:     ${{ secrets.REDDIT_USER_AGENT }}
   AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION:            ${{ secrets.AWS_REGION }}
   S3_BUCKET_NAME:        ${{ secrets.S3_BUCKET_NAME }}
 
 jobs:
-  scrape_gamer:
+  scrape_gamer_news:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Setup Python 3.9
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
@@ -34,10 +32,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Gamer News scraper
-        run: |
-          python GOATLAND-NEWS-SCRAPERS/reddit_news/gamer_news/run_reddit_gamer_news_scraper.py
+        run: python GOATLAND-NEWS-SCRAPERS/reddit_news/gamer_news/run_reddit_gamer_news_scraper.py
 
-      - name: Upload CSV to S3
+      - name: Upload Gamer CSV to S3
         run: |
           TODAY=$(date -u +'%Y-%m-%d')
           FILE="reddit_gamer_news_${TODAY}.csv"
