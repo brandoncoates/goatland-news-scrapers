@@ -1,4 +1,4 @@
-name: Run Reddit Gamers News Scraper
+name: Run Reddit Gamer News Scraper
 
 on:
   schedule:
@@ -29,10 +29,12 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
       - name: Run Gamer News scraper
-        run: python GOATLAND-NEWS-SCRAPERS/reddit_news/gamer_news/reddit_gamer_news_scraper.py
+        run: |
+          python reddit_news/gamer_news/reddit_gamer_news_scraper.py
 
       - name: Upload Gamer CSV to S3
         run: |
