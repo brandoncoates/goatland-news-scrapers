@@ -1,4 +1,4 @@
-name: Scrape Gamer News
+name: Run Reddit Gamers News Scraper
 
 on:
   schedule:
