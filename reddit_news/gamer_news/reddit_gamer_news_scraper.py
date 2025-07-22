@@ -19,13 +19,13 @@ S3_BUCKET_NAME       = os.getenv("S3_BUCKET_NAME")
 
 # ───── Validate ─────
 required = {
-    "REDDIT_CLIENT_ID": REDDIT_CLIENT_ID,
-    "REDDIT_CLIENT_SECRET": REDDIT_CLIENT_SECRET,
-    "REDDIT_USER_AGENT": REDDIT_USER_AGENT,
-    "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY_ID,
-    "AWS_SECRET_ACCESS_KEY": AWS_SECRET_ACCESS_KEY,
-    "AWS_REGION": AWS_REGION,
-    "S3_BUCKET_NAME": S3_BUCKET_NAME,
+    "REDDIT_CLIENT_ID":        REDDIT_CLIENT_ID,
+    "REDDIT_CLIENT_SECRET":    REDDIT_CLIENT_SECRET,
+    "REDDIT_USER_AGENT":       REDDIT_USER_AGENT,
+    "AWS_ACCESS_KEY_ID":       AWS_ACCESS_KEY_ID,
+    "AWS_SECRET_ACCESS_KEY":   AWS_SECRET_ACCESS_KEY,
+    "AWS_REGION":              AWS_REGION,
+    "S3_BUCKET_NAME":          S3_BUCKET_NAME,
 }
 for k, v in required.items():
     if not v:
@@ -63,7 +63,10 @@ def fetch_top_gamer_posts(limit=LIMIT):
 # ───── CSV writer ─────
 def save_posts_to_csv(posts, path):
     fieldnames = ["title", "url", "permalink", "score", "subreddit"]
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    dirpath = os.path.dirname(path)
+    if dirpath:
+        os.makedirs(dirpath, exist_ok=True)
+
     with open(path, "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=fieldnames)
         writer.writeheader()
